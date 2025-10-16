@@ -197,7 +197,7 @@ function syncVisibility(){ silver.style.display=entered?'none':'block'; gold.sty
 syncVisibility();
 
 /* ===== Audio fade-in ===== */
-function fadeIn(audio, target=1, ms=1200){
+function fadeIn(audio, target=0.60, ms=1200){
   if(!audio) return;
   audio.volume=0; audio.play().catch(()=>{});
   const steps=30, dt=ms/steps, dv=target/steps;
@@ -288,3 +288,4 @@ loopParticles();
 </script>
 </body>
 </html>
+
