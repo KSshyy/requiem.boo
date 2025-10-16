@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>REQUIEM</title>
+<link rel="icon" type="image/gif" href="taskbar.gif" />
+<meta name="description" content="uneasy lies the head that wears a crown" />
+<meta name="theme-color" content="#05060a" />
+<style>
+  :root{
+    --trail-pre:#f2fafa;   /* silver before enter */
+    --trail-post:#eae5b4;  /* gold after enter   */
+    --gold:#eae5b4;
+    --bg:#05060a;
+  }
+
+  html,body{
+    height:100%; margin:0; overflow:hidden; background:var(--bg);
+    cursor:none; font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* CRISP background w/ parallax */
+  .bg{ position:fixed; inset:0; z-index:0; background:url("unnamed.jpg") center/cover no-repeat; will-change:transform, background-position; }
+  .bg.drift{ animation:bg-drift 240s linear infinite; }
+  @keyframes bg-drift{ 0%{background-position:0% 50%} 50%{background-position:100% 52%} 100%{background-position:0% 50%} }
+
+  .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.12); z-index:1; }
+
+  .tagline{
+    position:fixed; left:50%; bottom:9%; transform:translateX(-50%);
+    z-index:2; user-select:none; color:#fffbe6; text-transform:uppercase; letter-spacing:.16em;
+    background:rgba(10,10,10,.35); border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(6px) saturate(120%); padding:.6em 1em; border-radius:999px;
+    font-size:clamp(12px,1.5vw,17px);
+  }
+
+  /* Click veil (blur only lives here) */
+  .veil{
+    position:fixed; inset:0; z-index:10; display:grid; place-items:center;
+    background:rgba(0,0,0,.50); backdrop-filter:blur(14px) brightness(.98);
+    transition:opacity 900ms ease;
+  }
+  .veil.hide{ opacity:0; pointer-events:none; }
+  .veil h1{
+    margin:0; color:#fff6dc; font-family:ui-serif,Georgia,serif;
+    font-size:clamp(48px,9vw,140px); letter-spacing:.03em;
+    text-shadow:0 2px 25px rgba(255,230,150,.30);
+  }
+
+  /* Center info (appears after enter) */
+  .center-info{
+    position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+    z-index:12; text-align:center;
+    color:#f6f6f6; font:16px/1.4 ui-monospace,Menlo,Consolas,monospace;
+    background:rgba(8,8,10,.55); border:1px solid rgba(255,255,255,.12);
+    backdrop-filter:blur(8px) saturate(120%);
+    border-radius:16px; padding:28px 36px; min-width:300px;
+    box-shadow:0 0 25px rgba(255,255,255,.07); opacity:0; pointer-events:none; transition:opacity 700ms ease;
+  }
+  .center-info.show{ opacity:1; pointer-events:auto; }
+  .center-info .label{ text-transform:uppercase; letter-spacing:.2em; opacity:.7; font-size:14px; margin-bottom:8px; animation:breath 6s ease-in-out infinite; }
+  .center-info .title{ font-size:clamp(18px,2.5vw,28px); color:#fffbe6; margin-bottom:16px; animation:breath 8s ease-in-out infinite; }
+  @keyframes breath{ 0%,100%{opacity:.85;letter-spacing:.18em} 50%{opacity:1;letter-spacing:.22em} }
+  .center-info .discord{ font-size:clamp(13px,1.5vw,17px); }
+  .center-info .discord a{ color:var(--gold); text-decoration:none; font-weight:600; border-bottom:1px dotted rgba(234,229,180,.35); transition:filter .25s ease, text-shadow .25s ease, border-color .25s ease; }
+  .center-info .discord a:hover{ border-bottom-color:rgba(234,229,180,.75); text-shadow:0 0 10px rgba(234,229,180,.7), 0 0 22px rgba(234,229,180,.6); filter:brightness(1.08); }
+
+  /* Particles (under trail, above overlay) */
+  #particles{ position:fixed; inset:0; z-index:3; pointer-events:none; }
+
+  /* Trail + cursors above veil so they never blur */
+  canvas#trail{ position:fixed; inset:0; z-index:20; pointer-events:none; }
+  .cursor{ position:fixed; z-index:25; pointer-events:none; height:auto; transform:translate(-50%,-50%); image-rendering:auto; filter:drop-shadow(0 0 8px rgba(234,229,180,.6)); transition:filter 80ms linear; }
+  #silver{ display:block; width:52px; transform:translate(-50%,-50%) rotate(-68deg); }
+  #gold  { display:none;  width:31px; transform:translate(-50%,-50%) rotate(133deg); }
+
+  /* Sigil flash */
+  .sigil{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:15; opacity:0; pointer-events:none; }
+  .sigil svg{ width:120px; height:auto; filter:drop-shadow(0 0 12px rgba(234,229,180,.7)); }
+  .sigil.show{ animation:sigil-flicker 1.2s ease forwards; }
+  @keyframes sigil-flicker{ 0%{opacity:0;transform:translate(-50%,-50%) scale(.9)} 20%{opacity:1;transform:translate(-50%,-50%) scale(1)} 60%{opacity:.9} 100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)} }
+
+  /* NEW: ensure system cursor never appears on interactive elements */
+  a, button, input, textarea, select, [role="button"] { cursor: none !important; }
+
+  @media (max-width: 480px){ .center-info{ padding:20px 22px; min-width:240px; } }
+</style>
+</head>
+<body>
+  <div class="bg drift" id="bg"></div>
+  <div class="overlay"></div>
+  <div class="tagline">uneasy lies the head that wears a crown</div>
+
+  <!-- Veil -->
+  <div id="veil" class="veil"><h1>REQUIEM</h1></div>
+
+  <!-- Centered Now Playing + Discord -->
+  <div class="center-info" id="centerInfo">
+    <div class="label">now playing</div>
+    <div class="title" id="npTitle">Frou Frou — Sane Again</div>
+    <div class="discord"><span>discord:&nbsp;</span><a href="https://discord.com/users/1325946678913536072" target="_blank" rel="noopener">nowaybak</a></div>
+  </div>
+
+  <!-- Sigil -->
+  <div class="sigil" id="sigil">
+    <svg viewBox="0 0 64 32" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 24 L12 10 L24 18 L32 8 L40 18 L52 10 L58 24 Z" fill="none" stroke="#eae5b4" stroke-width="2.4" stroke-linejoin="round" />
+      <rect x="6" y="24" width="52" height="3" rx="1.6" fill="#eae5b4" opacity=".85"/>
+    </svg>
+  </div>
+
+  <!-- FX layers -->
+  <canvas id="particles"></canvas>
+  <canvas id="trail"></canvas>
+  <img id="silver" class="cursor" src="cursor_before.png" alt="">
+  <img id="gold"   class="cursor" src="cursor_after.png"  alt="">
+
+  <!-- Audio -->
+  <audio id="bgm" src="music.mp3" preload="auto" loop data-title="Frou Frou — Sane Again"></audio>
+  <audio id="pad" src="ambient.mp3" preload="auto" loop></audio>
+
+<script>
+/* ===== Configs ===== */
+const SILVER = { anchor:{ x:0.1959999999999994, y:0.857 }, angle: -68, width:52, colorVar:'--trail-pre' };
+const GOLD   = {
+  anchor:{ x:0.48699999999999966, y:0.08899999999999941 },
+  angle:133,
+  width:31,
+  colorVar:'--trail-post',
+  keyOffset:{ x:-24, y:-22 }   // calibrated so the teeth sit on the true click point
+};
+
+/* ===== Elements ===== */
+const veil   = document.getElementById('veil');
+const center = document.getElementById('centerInfo');
+const bgm    = document.getElementById('bgm');
+const pad    = document.getElementById('pad'); // optional ambient pad
+const silver = document.getElementById('silver');
+const gold   = document.getElementById('gold');
+const cvsP   = document.getElementById('particles');
+const ctxP   = cvsP.getContext('2d');
+const cvs    = document.getElementById('trail');
+const ctx    = cvs.getContext('2d');
+const npTitle= document.getElementById('npTitle');
+const bg     = document.getElementById('bg');
+
+/* ===== Parallax ===== */
+let parX=0, parY=0;
+window.addEventListener('mousemove', e=>{
+  const nx=(e.clientX/innerWidth - .5), ny=(e.clientY/innerHeight - .5);
+  parX = nx*6; parY = ny*4;
+  bg.style.transform = `translate(${parX}px, ${parY}px)`;
+},{passive:true});
+
+/* ===== Fit canvases ===== */
+function fit(){ cvs.width=innerWidth; cvs.height=innerHeight; cvsP.width=innerWidth; cvsP.height=innerHeight; }
+addEventListener('resize', fit); fit();
+
+/* ===== Now Playing ===== */
+function deriveTitle(){
+  const tagged = bgm.dataset.title && bgm.dataset.title.trim();
+  if (tagged) return tagged;
+  try{
+    const url = new URL(bgm.currentSrc || bgm.src, location.href);
+    let name = decodeURIComponent(url.pathname.split('/').pop() || 'music');
+    name = name.replace(/\.[a-z0-9]+$/i,'').replace(/[_\-]+/g,' ').trim();
+    return name || 'music';
+  }catch{ return 'music'; }
+}
+function setNowPlaying(){ npTitle.textContent = deriveTitle(); }
+setNowPlaying(); bgm.addEventListener('loadedmetadata', setNowPlaying);
+
+/* ===== State ===== */
+let entered=false, mx=innerWidth/2, my=innerHeight/2;
+let lastX=mx, lastY=my, speed=0;
+
+/* ===== Cursor placement (applies keyOffset) ===== */
+function styleCursor(el, cfg){
+  const offX = (cfg.keyOffset && cfg.keyOffset.x) || 0;
+  const offY = (cfg.keyOffset && cfg.keyOffset.y) || 0;
+  el.style.left = (mx + offX) + 'px';
+  el.style.top  = (my + offY) + 'px';
+  el.style.width= cfg.width + 'px';
+  el.style.transform = `translate(-50%,-50%) rotate(${cfg.angle}deg)`;
+  const pulse = Math.min(1, speed/40);
+  const glow  = 6 + pulse*10;
+  el.style.filter = `drop-shadow(0 0 ${glow}px rgba(234,229,180,${.5+.4*pulse}))`;
+}
+function placeBoth(){ styleCursor(silver,SILVER); styleCursor(gold,GOLD); }
+addEventListener('mousemove', e=>{ mx=e.clientX; my=e.clientY; speed=Math.hypot(mx-lastX,my-lastY); lastX=mx; lastY=my; placeBoth(); }, {passive:true});
+silver.addEventListener('load', placeBoth); gold.addEventListener('load', placeBoth); placeBoth();
+
+/* ===== Key visibility ===== */
+function syncVisibility(){ silver.style.display=entered?'none':'block'; gold.style.display=entered?'block':'none'; }
+syncVisibility();
+
+/* ===== Audio fade-in ===== */
+function fadeIn(audio, target=1, ms=1200){
+  if(!audio) return;
+  audio.volume=0; audio.play().catch(()=>{});
+  const steps=30, dt=ms/steps, dv=target/steps;
+  let i=0; const t=setInterval(()=>{ audio.volume=Math.min(target, audio.volume+dv); if(++i>=steps) clearInterval(t); }, dt);
+}
+
+/* ===== Enter ===== */
+async function enter(){
+  if(entered) return;
+  entered=true; syncVisibility(); veil.classList.add('hide');
+  const sigil=document.getElementById('sigil'); sigil.classList.add('show'); setTimeout(()=>sigil.remove(),1300);
+  setTimeout(()=>center.classList.add('show'), 900);
+  fadeIn(bgm, 1, 1600); if (pad && pad.src) fadeIn(pad, 0.18, 1400);
+}
+veil.addEventListener('click', enter);
+addEventListener('keydown', e=>{ if(e.code==='Enter'||e.code==='Space') enter(); });
+
+/* ===== Active key helpers ===== */
+const DEG=Math.PI/180;
+function activeCfg(){ return entered ? GOLD : SILVER; }
+function activeImg(){ return entered ? gold : silver; }
+
+/* ===== Emitter (uses same keyOffset) ===== */
+function emitter(){
+  const img=activeImg(), cfg=activeCfg();
+  const natW=img.naturalWidth||1, natH=img.naturalHeight||1;
+  const scale=cfg.width/natW;
+  const ax=(cfg.anchor.x-0.5)*natW*scale, ay=(cfg.anchor.y-0.5)*natH*scale;
+  const a=cfg.angle*DEG;
+  const rx=ax*Math.cos(a)-ay*Math.sin(a);
+  const ry=ax*Math.sin(a)+ay*Math.cos(a);
+  const offX=(cfg.keyOffset && cfg.keyOffset.x)||0;
+  const offY=(cfg.keyOffset && cfg.keyOffset.y)||0;
+  return { x: mx + offX + rx, y: my + offY + ry };
+}
+
+/* ===== Trail (tapered) ===== */
+let points=[], last={x:mx,y:my};
+const MAX=180, MIN=2.0, FADE=0.014, BASE_W=6.4, GLOW=20;
+
+function addPoint(p){ points.push({x:p.x,y:p.y,life:1}); if(points.length>MAX) points.shift(); last=p; }
+addEventListener('mousemove', ()=>{ const p=emitter(); if(Math.hypot(p.x-last.x,p.y-last.y)>=MIN) addPoint(p); }, {passive:true});
+
+function loopTrail(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  for(let i=0;i<points.length;i++) points[i].life-=FADE;
+  points=points.filter(p=>p.life>0);
+  if(points.length>1){
+    const cfg=activeCfg();
+    const [r,g,b]=((hex)=>{ const h=hex.replace('#',''); const x=h.length===3?h.split('').map(c=>c+c).join(''):h; const n=parseInt(x,16); return [(n>>16)&255,(n>>8)&255,n&255]; })(getComputedStyle(document.documentElement).getPropertyValue(cfg.colorVar).trim());
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    for(let i=0;i<points.length-1;i++){
+      const t=i/(points.length-1); const a=Math.min(1,0.15+0.85*t); const w=1+BASE_W*(t*t);
+      ctx.save(); ctx.shadowColor=`rgba(${r},${g},${b},${0.25*a})`; ctx.shadowBlur=GLOW*(0.2+0.8*t);
+      ctx.lineWidth=w+12*(0.3+0.7*t); ctx.strokeStyle=`rgba(${r},${g},${b},0.16)`;
+      ctx.beginPath(); ctx.moveTo(points[i].x,points[i].y); ctx.lineTo(points[i+1].x,points[i+1].y); ctx.stroke(); ctx.restore();
+      ctx.lineWidth=w; ctx.strokeStyle=`rgba(${r},${g},${b},${a})`;
+      ctx.beginPath(); ctx.moveTo(points[i].x,points[i].y); ctx.lineTo(points[i+1].x,points[i+1].y); ctx.stroke();
+    }
+  }
+  requestAnimationFrame(loopTrail);
+}
+loopTrail();
+
+/* ===== Ambient particles ===== */
+let particles=[];
+function spawnParticle(){
+  const cx=innerWidth/2 + (Math.random()-0.5)*300;
+  const cy=innerHeight/2 + (Math.random()-0.5)*120;
+  const life=3 + Math.random()*4;
+  particles.push({ x:cx, y:cy, vx:(Math.random()-0.5)*0.15, vy:-0.18 - Math.random()*0.15, r:1 + Math.random()*1.6, life, t:life });
+  if(particles.length>180) particles.shift();
+}
+setInterval(spawnParticle, 180);
+function loopParticles(){
+  ctxP.clearRect(0,0,cvsP.width,cvsP.height);
+  for(const p of particles){ p.x+=p.vx; p.y+=p.vy; p.t-=1/60; }
+  particles = particles.filter(p=>p.t>0);
+  for(const p of particles){
+    const a=Math.max(0,p.t/p.life);
+    ctxP.beginPath(); ctxP.arc(p.x,p.y,p.r*(1.2+a),0,Math.PI*2);
+    ctxP.fillStyle = `rgba(234,229,180,${0.06 + 0.22*a})`;
+    ctxP.fill();
+  }
+  requestAnimationFrame(loopParticles);
+}
+loopParticles();
+</script>
+</body>
+</html>
