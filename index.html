@@ -197,7 +197,7 @@ function syncVisibility(){ silver.style.display=entered?'none':'block'; gold.sty
 syncVisibility();
 
 /* ===== Audio fade-in ===== */
-function fadeIn(audio, target=0.60, ms=1200){
+function fadeIn(audio, target=1, ms=1200){
   if(!audio) return;
   audio.volume=0; audio.play().catch(()=>{});
   const steps=30, dt=ms/steps, dv=target/steps;
@@ -210,7 +210,7 @@ async function enter(){
   entered=true; syncVisibility(); veil.classList.add('hide');
   const sigil=document.getElementById('sigil'); sigil.classList.add('show'); setTimeout(()=>sigil.remove(),1300);
   setTimeout(()=>center.classList.add('show'), 900);
-  fadeIn(bgm, 1, 1600); if (pad && pad.src) fadeIn(pad, 0.18, 1400);
+  fadeIn(bgm, 0.50, 1600); if (pad && pad.src) fadeIn(pad, 0.18, 1400);
 }
 veil.addEventListener('click', enter);
 addEventListener('keydown', e=>{ if(e.code==='Enter'||e.code==='Space') enter(); });
@@ -288,4 +288,5 @@ loopParticles();
 </script>
 </body>
 </html>
+
 
